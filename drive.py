@@ -35,7 +35,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SIMULATOR_PATH = os.path.join(SCRIPT_DIR, 'beta_simulator_windows', 'beta_simulator.exe')
 MODEL_PATH = os.path.join(SCRIPT_DIR, 'model', 'model.h5')
 PORT = 4567
-SPEED_LIMIT = 10
+SPEED_LIMIT = 25
 
 # ============================================================
 # SocketIO Server Setup
@@ -65,12 +65,14 @@ def img_preprocess(img):
 @sio.on('telemetry')
 def telemetry(sid, data):
     """Handle telemetry data from the simulator."""
+    if data is None:
+        return
     speed = float(data['speed'])
     image = Image.open(BytesIO(base64.b64decode(data['image'])))
     image = np.asarray(image)
     image = img_preprocess(image)
     image = np.array([image])
-    steering_angle = float(model.predict(image, verbose=0))
+    steering_angle = float(model.predict(image, verbose=0)[0][0])
     throttle = 1.0 - speed / SPEED_LIMIT
     print(f'Steering: {steering_angle:+.4f} | Throttle: {throttle:.4f} | Speed: {speed:.2f}')
     send_control(steering_angle, throttle)
@@ -140,6 +142,21 @@ if __name__ == '__main__':
         sim_process = launch_simulator()
     else:
         print('Skipping TEST DRIVE SIMULATOR auto-launch (--no-launch flag)')
+
+    # Free up port if still in use from a previous run
+    try:
+        import socket
+        test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        test_sock.settimeout(1)
+        result = test_sock.connect_ex(('127.0.0.1', PORT))
+        test_sock.close()
+        if result == 0:
+            print(f'[INFO] Port {PORT} is in use. Cleaning up...')
+            os.system(f'for /f "tokens=5" %a in (\'netstat -ano ^| findstr :{PORT}\') do taskkill /F /PID %a 2>nul')
+            time.sleep(1)
+            print(f'[INFO] Port {PORT} freed up.')
+    except Exception:
+        pass
 
     # Start server
     print(f'\nStarting server on port {PORT}...')

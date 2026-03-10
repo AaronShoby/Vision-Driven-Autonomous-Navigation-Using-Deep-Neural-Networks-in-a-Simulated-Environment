@@ -1,22 +1,3 @@
-"""
-Model Training Script - Autonomous Driving
-============================================
-Trains an NVIDIA-based CNN model for autonomous steering prediction.
-
-Architecture: NVIDIA End-to-End Learning for Self-Driving Cars
-Input: Camera images (200x66, YUV colorspace)
-Output: Steering angle (regression)
-
-Prerequisites:
-    - Collect training data using collect_data.py first
-    - Training data should be in Data/ directory
-    - Data/driving_log.csv and Data/IMG/ must exist
-
-Usage:
-    python train_model.py
-    python train_model.py --epochs 15 --batch 200
-"""
-
 import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
@@ -131,8 +112,39 @@ def load_data():
 # ============================================================
 # Data Augmentation & Batch Generator
 # ============================================================
+def random_brightness(image):
+    """Randomly adjust brightness to simulate different lighting conditions."""
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    brightness = np.random.uniform(0.4, 1.3)
+    hsv[:, :, 2] = np.clip(hsv[:, :, 2] * brightness, 0, 255).astype(np.uint8)
+    return cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+
+
+def random_shadow(image):
+    """Add random shadow to simulate shadows on the road (helps with Track 2)."""
+    h, w = image.shape[:2]
+    # Random shadow region using a vertical strip
+    x1, x2 = np.random.randint(0, w, 2)
+    if x1 > x2:
+        x1, x2 = x2, x1
+    shadow_mask = np.ones_like(image, dtype=np.float32)
+    shadow_mask[:, x1:x2, :] = np.random.uniform(0.3, 0.7)
+    return np.clip(image * shadow_mask, 0, 255).astype(np.uint8)
+
+
+def random_translate(image, steering, x_range=100, y_range=10):
+    """Randomly shift image horizontally/vertically to simulate different road positions."""
+    dx = np.random.uniform(-x_range, x_range)
+    dy = np.random.uniform(-y_range, y_range)
+    # Adjust steering proportionally to horizontal shift
+    steering += dx * 0.002
+    M = np.float32([[1, 0, dx], [0, 1, dy]])
+    image = cv2.warpAffine(image, M, (image.shape[1], image.shape[0]))
+    return image, steering
+
+
 def random_augment(image_path, steering):
-    """Load and augment a single image."""
+    """Load and apply random augmentations to a single image."""
     image = cv2.imread(image_path)
     if image is None:
         # Try alternative path resolution
@@ -147,6 +159,18 @@ def random_augment(image_path, steering):
     if np.random.rand() > 0.5:
         image = cv2.flip(image, 1)
         steering = -steering
+
+    # Random translation (shift)
+    if np.random.rand() > 0.5:
+        image, steering = random_translate(image, steering)
+
+    # Random brightness
+    if np.random.rand() > 0.5:
+        image = random_brightness(image)
+
+    # Random shadow
+    if np.random.rand() > 0.5:
+        image = random_shadow(image)
 
     return image, steering
 

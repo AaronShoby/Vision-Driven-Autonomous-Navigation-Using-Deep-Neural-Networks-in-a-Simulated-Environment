@@ -128,5 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 Data/IMG/
-simulator-windows-64/Default Windows desktop 64-bit_Data/
-
+simulator-windows-64/
+beta_simulator_windows/
+sdcar_env/
+model/*.h5
+model/*.png
