@@ -32,8 +32,8 @@ Since this is a capstone project, here's how to position it against criticism li
 ## 🛠️ Setup Completed
 
 ### Source Repository
-- **Original**: https://github.com/entbappy/Complete-Self-Driving-Car
-- **Cloned and renamed to**: `c:\Users\User\Antigravity\Autonomous driving`
+- **Repository**: https://github.com/AaronShoby/Vision-Driven-Autonomous-Navigation-Using-Deep-Neural-Networks-in-a-Simulated-Environment
+- **Local Path**: `c:\Users\User\Antigravity\Autonomous driving`
 
 ### Environment Setup
 ```
